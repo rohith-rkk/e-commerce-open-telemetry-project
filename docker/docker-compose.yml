@@ -1,0 +1,125 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+x-default-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+    tag: "{{.Name}}"
+
+networks:
+  default:
+    name: opentelemetry-demo
+    driver: bridge
+
+services:
+  # ******************
+  # Core Demo Services
+  # ******************
+  # AdService
+  Ad-service:
+    image: ${IMAGE_NAME}:${DEMO_VERSION}-Ad-service
+    container_name: Ad-service
+    build:
+      context: ./
+      dockerfile: ${AD-SERVICE_DOCKERFILE}
+      cache_from:
+        - ${IMAGE_NAME}:${IMAGE_VERSION}-Ad-service
+      args:
+        OTEL_JAVA_AGENT_VERSION: ${OTEL_JAVA_AGENT_VERSION}
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    restart: unless-stopped
+    ports:
+      - "${AD-SERVICE_PORT}"
+    environment:
+      - AD-SERVICE_PORT
+      - FLAGD_HOST
+      - FLAGD_PORT
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
+      - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_RESOURCE_ATTRIBUTES
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_SERVICE_NAME=ad
+      # Workaround on OSX for https://bugs.openjdk.org/browse/JDK-8345296
+      - _JAVA_OPTIONS
+    depends_on:
+      otel-collector:
+        condition: service_started
+      flagd:
+        condition: service_started
+    logging: *logging
+
+    # Product Catalog service
+  product-catalog:
+    image: ${IMAGE_NAME}:${DEMO_VERSION}-product-catalog
+    container_name: product-catalog
+    build:
+      context: ./
+      dockerfile: ${PRODUCT_CATALOG_DOCKERFILE}
+      cache_from:
+        - ${IMAGE_NAME}:${IMAGE_VERSION}-product-catalog
+    deploy:
+      resources:
+        limits:
+          memory: 20M
+    restart: unless-stopped
+    ports:
+      - "${PRODUCT_CATALOG_PORT}"
+    environment:
+      - PRODUCT_CATALOG_PORT
+      - PRODUCT_CATALOG_RELOAD_INTERVAL
+      - FLAGD_HOST
+      - FLAGD_PORT
+      - OTEL_EXPORTER_OTLP_ENDPOINT
+      - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_RESOURCE_ATTRIBUTES
+      - OTEL_SERVICE_NAME=product-catalog
+    volumes:
+      - ./src/product-catalog/products:/usr/src/app/products
+    depends_on:
+      otel-collector:
+        condition: service_started
+      flagd:
+        condition: service_started
+    logging: *logging
+
+    # Recommendation service
+  recommendation:
+    image: ${IMAGE_NAME}:${DEMO_VERSION}-recommendation
+    container_name: recommendation
+    build:
+      context: ./
+      dockerfile: ${RECOMMENDATION_DOCKERFILE}
+      cache_from:
+        - ${IMAGE_NAME}:${IMAGE_VERSION}-recommendation
+    deploy:
+      resources:
+        limits:
+          memory: 500M               # This is high to enable supporting the recommendationCache feature flag use case
+    restart: unless-stopped
+    ports:
+      - "${RECOMMENDATION_PORT}"
+    environment:
+      - RECOMMENDATION_PORT
+      - PRODUCT_CATALOG_ADDR
+      - FLAGD_HOST
+      - FLAGD_PORT
+      - OTEL_PYTHON_LOG_CORRELATION=true
+      - OTEL_EXPORTER_OTLP_ENDPOINT
+      - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_RESOURCE_ATTRIBUTES
+      - OTEL_SERVICE_NAME=recommendation
+      - PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+    depends_on:
+      product-catalog:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+      flagd:
+        condition: service_started
+    logging: *logging
+
