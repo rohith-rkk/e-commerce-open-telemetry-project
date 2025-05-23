@@ -1,5 +1,3 @@
----
-
 **README.md**
 ```md
 # Product Catalog Microservice
@@ -50,15 +48,15 @@ info[0000] - Product catalog gRPC server started on port: 8080
 
 1. **Build the Docker image:**
    ```bash
-   docker build -t <your dockerusername/tag> .
+   docker build -t "your dockerusername/tag" .
    ```
 2. **Verify the built image:**
    ```bash
-   docker images | grep <your docker-username>
+   docker images | grep "your docker-username"
    ```
 3. **Run the container:**
    ```bash
-   docker run -p 8088:8088 <your dockerusername/tag>
+   docker run -p 8088:8088 "your dockerusername/tag"
    ```
 
 ---
@@ -73,7 +71,7 @@ info[0000] - Product catalog gRPC server started on port: 8080
 
 2. **Push the image to your repository:**
    ```bash
-   docker push <your dockerusername/tag>
+   docker push "your dockerusername/tag"
    ```
 
 ---
