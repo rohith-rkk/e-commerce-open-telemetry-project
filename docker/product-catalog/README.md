@@ -1,5 +1,3 @@
----
-
 **README.md**
 ```md
 # Product Catalog Microservice
